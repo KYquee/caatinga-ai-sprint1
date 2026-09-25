@@ -95,146 +95,122 @@ BFS, DFS iterativa e UCS não falharam até n=1500. O crescimento é O(n²), coe
 ---
 
 ## Parte 3 - Busca informada e busca local
-
+ 
 ### 3.1 A* com três heurísticas
-
-Executando o $A^*$ implementado em `src/buscas.py` com a semente `24114034` (ordem de vizinhos N, S, O, L e teste de objetivo na expansão):
-
-| Heurística | Custo da rota | Nós expandidos | Admissível? (prove) |
-|---|:---:|:---:|---|
-| **$h_1(n) = 0$** | 28 | 113 | **Sim** (Trivial: como todos os custos de entrada são $\ge 1 > 0$, $0 \le h^*(n)$ para todo $n$). |
-| **$h_2(n) = \text{Manhattan}(n)$** | 28 | 54 | **Sim** (Demonstração formal na Seção 3.2 abaixo). |
-| **$h_3(n) = 4 \times \text{Manhattan}(n)$** | 31 | 25 | **Não** (Superestima o custo real restante; contraexemplo na Seção 3.2). |
-
-*Nota de calibração:* Rodando com a semente de aferição `20231045`, o $A^*$ com $h_2$ obteve exatamente custo 34 e expandiu 91 nós (aderente à referência do enunciado de ~93 nós).
-
----
-
-### 3.2 Demonstrações de Admissibilidade
-
-#### Prova de Admissibilidade para $h_2(n)$
-Em uma grade bidimensional com movimentação restrita às quatro direções cardeais ortogonais (Norte, Sul, Oeste, Leste), a distância de Manhattan entre qualquer célula $n = (i, j)$ e o objetivo $obj = (11, 11)$ é dada por:
-$$d_M(n, obj) = |i - 11| + |j - 11|$$
-
-Essa distância representa o número mínimo absoluto de passos ortogonais necessários para transitar de $n$ até $obj$ em um grafo ideal (relaxado, sem bloqueios `#`).
-
-No pomar do Caatinga.AI, os custos de entrada em talhões livres são:
-* Carreador firme (`.`): $c = 1$
-* Solo encharcado (`~`): $c = 4$
-
-Portanto, o custo mínimo de qualquer transição possível na grade é $c_{\min} = 1$. Seja $P$ o número real de passos de qualquer caminho factível de $n$ até o objetivo. Como eventuais obstáculos (`#`) apenas forçam desvios, temos necessariamente $P \ge d_M(n, obj)$. Logo, o custo real restante $h^*(n)$ satisfaz:
-$$h^*(n) = \sum_{k=1}^{P} c(step_k) \ge \sum_{k=1}^{P} c_{\min} = P \times 1 = P \ge d_M(n, obj) = h_2(n)$$
-
-Como $h_2(n) \le h^*(n)$ para todo estado $n$ alcançável e $h_2(obj) = 0$, $h_2$ nunca superestima o custo real restante até o objetivo, sendo **estritamente admissível** (e consistente, visto que a variação de $h_2$ entre vizinhos ortogonais é de no máximo $1 \le c$).
-
-#### Refutação de Admissibilidade para $h_3(n)$ com Par de Talhões Concretos
-A heurística $h_3(n) = 4 \times d_M(n, obj)$ pressupõe que todos os passos até o objetivo ocorrerão sobre solo encharcado (`~`, custo 4). Contudo, grande parte do pomar é composta por carreadores firmes (`.`, custo 1). Seguem dois exemplos concretos da grade gerada com a semente `24114034`:
-
-1. **Talhão inicial $(0, 0)$:**
-   * Distância de Manhattan até $(11, 11)$: $|0 - 11| + |0 - 11| = 22$.
-   * Valor heurístico estimado: $h_3((0, 0)) = 4 \times 22 = \mathbf{88}$.
-   * Custo real ótimo até o objetivo (calculado via UCS): $h^*((0, 0)) = \mathbf{28}$.
-   * **Conclusão:** $h_3((0, 0)) = 88 > 28 = h^*((0, 0))$. A heurística superestima o custo real em **$+60$** ($+214\%$).
-
-2. **Talhão vizinho ao objetivo $(10, 11)$:**
-   * Tipo de terreno do talhão $(10, 11)$: carreador firme (`.`).
-   * Distância de Manhattan até o objetivo $(11, 11)$: $|10 - 11| + |11 - 11| = 1$.
-   * Valor heurístico estimado: $h_3((10, 11)) = 4 \times 1 = \mathbf{4}$.
-   * Custo real restante: para entrar na célula objetivo $(11, 11)$ (que é `.`), o custo é exatamente $\mathbf{1}$.
-   * **Conclusão:** $h_3((10, 11)) = 4 > 1 = h^*((10, 11))$. A heurística superestima o custo real em **$+3$** ($+300\%$).
-
-A existência desses estados concretos viola a condição $h(n) \le h^*(n)$, provando formalmente que $h_3$ **não é admissível**.
-
----
-
-### 3.3 A Pergunta que Separa quem Rodou de quem Entendeu
-
-#### Comparação do Custo Devolvido por $h_3$ com o UCS
-* Custo ótimo de referência (UCS): **28**
-* Custo devolvido pelo $A^*$ com $h_3$: **31**
-* O custo ficou **maior** que o ótimo.
-
-**Cálculo da perda percentual:**
-$$\text{Perda Percentual} = \frac{\text{Custo}(h_3) - \text{Custo}(\text{UCS})}{\text{Custo}(\text{UCS})} \times 100\% = \frac{31 - 28}{28} \times 100\% = \frac{3}{28} \times 100\% \approx \mathbf{10,71\%}$$
-
-**Nós de expansão "comprados":**
-* A UCS expandiu **113 nós**.
-* O $A^*$ com $h_2$ (admissível) expandiu **54 nós**.
-* O $A^*$ com $h_3$ expandiu apenas **25 nós**.
-* A perda de $10,71\%$ na otimalidade do caminho permitiu economizar **88 nós expandidos** em relação à UCS (uma redução de **$77,88\%$** no esforço de busca) e **29 nós expandidos** em relação ao $A^*$ com Manhattan (redução de **$53,70\%$**).
-
-#### E se o Custo Fosse Igual, Provaria Admissibilidade?
-**Não.** A admissibilidade de uma heurística é uma propriedade universal quantificada sobre todo o espaço de estados: exige-se que $h(n) \le h^*(n)$ para **todo** $n \in S$. O fato de um algoritmo guiado por uma heurística inadmissível eventualmente devolver uma rota de custo ótimo em um pomar específico é apenas uma coincidência decorrente da topologia daquele mapa particular e dos critérios de desempate da fila, não fornecendo nenhuma garantia matemática teórica para outras execuções ou outros pomares.
-
-#### Cenário de Negócio da Cooperativa
-**Condição verificável:**
-Trocar garantia de otimalidade por velocidade é justificável quando o pomar escala para dimensões operacionais de grande porte ($n \ge 1.000$ talhões, totalizando $\ge 1.000.000$ de estados) e o veículo autônomo opera sob um **limite estrito de tempo de resposta em tempo real ($t_{\text{limite}} \le 200\text{ ms}$)** em hardware embarcado de baixo consumo.
-Conforme demonstrado no teste de escalabilidade da Parte 2.4, a UCS leva **15,2 segundos** para planejar em $n=1.000$, o que tornaria o robô inoperante em tempo real. Aceitar um desvio de rota de até $\sim 10\%$ no custo energético da bateria em troca de uma resposta calculada em milissegundos ($< 100\text{ ms}$) viabiliza a operação do sistema sem interrupções de navegação em campo.
-
----
-
-### 3.4 Busca Local: Seleção de $K=15$ Talhões para Inspeção (6h de Bateria)
-
-#### Modelagem Formal do Problema
-1. **Espaço de Estados ($S$):** Subconjunto de exatamente $K = 15$ talhões livres e distintos da grade ($S \subset L$, com $|S| = 15$ e $L = \{(i,j) \mid \text{grade}[i][j] \neq \text{'\#'}\}$). Na semente `24114034`, $|L| = 121$, resultando em um espaço de busca com $\binom{121}{15} \approx 6,65 \times 10^{17}$ combinações possíveis.
-2. **Vizinhança ($N(S)$):** Operador de troca simples (1-swap). Um vizinho $S'$ é gerado substituindo um talhão inspecionado $u \in S$ por um talhão livre não inspecionado $v \in L \setminus S$. Cada estado possui uma vizinhança imediata de $15 \times (121 - 15) = 1.590$ estados vizinhos.
-3. **Função Objetivo ($f(S)$ - a ser maximizada):**
-   $$f(S) = \sum_{t \in S} R_{\text{base}}(t) + \sum_{u \in S} \sum_{v \in S \cap \text{viz}(u)} 1.0 - 0.5 \times \sum_{t \in S} \left( |i_t - c_i| + |j_t - c_j| \right)$$
-   * **Risco Fitossanitário Base:** Talhão encharcado `~` pontua $+10.0$ (maior suscetibilidade a patógenos radiculares e fúngicos da manga); carreador firme `.` pontua $+3.0$.
-   * **Bônus de Contiguidade / Foco:** $+2.0$ por par de talhões adjacentes ortogonalmente em $S$, refletindo a detecção de manchas contíguas de infestação.
-   * **Penalidade Logística de Dispersão:** $0.5 \times$ soma das distâncias Manhattan de cada talhão ao centroide geométrico $(c_i, c_j)$ do conjunto $S$, modelando o gasto de deslocamento do robô sob o teto rígido de 6 horas de autonomia de bateria.
-
-#### Resultados Comparativos (30 Rodadas Independentes - `src/busca_local.py`)
-
-| Algoritmo | Média | Desvio Padrão | Melhor Valor | Pior Valor |
-|---|:---:|:---:|:---:|:---:|
-| **Subida de Encosta (Hill Climbing)** | 154,94 | 2,97 | 158,87 | 150,20 |
-| **Têmpera Simulada (Simulated Annealing)** | 152,61 | 2,26 | 158,73 | 148,93 |
-
-* **Média de pioras aceitas de propósito na Têmpera Simulada:** **603,9 pioras/execução** (mínimo: 565, máximo: 657).
-
-#### Por que Aceitar Piora de Propósito Ajuda? (Aula 04)
-A Subida de Encosta adota uma abordagem puramente gulosa e monotônica: só aceita transições onde $f(S') > f(S)$. Como o espaço de busca possui múltiplos agrupamentos de talhões encharcados separados por barreiras de carreadores e dispersão, a função objetivo apresenta diversos **máximos locais**. A Subida de Encosta inevitavelmente fica presa no primeiro pico local que atinge, incapaz de cruzar regiões de valor temporariamente inferior.
-
-A Têmpera Simulada supera essa armadilha aceitando movimentos que pioram a função objetivo com probabilidade controlada pela temperatura:
-$$P(\text{aceitar piora}) = e^{\frac{\Delta E}{T}}, \quad \text{onde } \Delta E = f(S') - f(S) < 0$$
-
-No início da busca, quando a temperatura $T$ está alta, o algoritmo aceita pioras com frequência (em média mais de 600 pioras por rodada nos testes práticos), funcionando como um passeio aleatório capaz de transpor vales e escapar de bacias de atração medíocres. À medida que o sistema resfria ($T \to 0$), a probabilidade de aceitar pioras decai progressivamente, convergindo para uma exploração refinada em torno das melhores bacias globais encontradas.
-
----
-
-### Bônus - Liga de IA (+0,3): Construção de Contraexemplo para a DFS
-
-#### Racional da Construção Analítica
-A ordem fixa de expansão dos vizinhos declarada para o projeto é **Norte, Sul, Oeste, Leste** ($N \to S \to O \to L$).
-A partir do portão inicial $(0, 0)$, a direção Norte está fora dos limites da grade. Portanto, a **primeira direção que a DFS sempre tentará explorar é o Sul** ($S = (1, 0)$).
-
-Para forçar a DFS a devolver uma rota substancialmente pior que a ótima, construímos deliberadamente uma grade $4 \times 4$ ($\le 8 \times 8$) com duas ramificações antagônicas a partir de $(0, 0)$:
-1. **O ramo ao Leste ($L$):** Uma linha direta de carreadores firmes (`.`, custo 1) até a meta $(3, 3)$.
-2. **O ramo ao Sul ($S$):** Um corredor contínuo de talhões de solo encharcado (`~`, custo 4) ladeado por bloqueios (`#`), formando uma serpentina obrigatória que desce até a base da grade antes de alcançar a meta.
-
-Como a DFS prioriza o Sul e mergulha cegamente em profundidade sem levar os custos de aresta em consideração, ela percorre toda a serpentina de solo encharcado sem retroceder, ignorando o caminho direto e econômico pelo Leste.
-
-#### Grade $4 \times 4$ Construída à Mão
+ 
+Rodando `src/buscas.py` com a semente `24114034` (ordem N,S,O,L; objetivo testado na expansão):
+ 
+| Heurística | Custo | Nós expandidos | Admissível? |
+|---|---|---|---|
+| h1 = 0 | 28 | 113 | Sim (trivial: 0 ≤ h*(n) sempre) |
+| h2 = Manhattan | 28 | 54 | Sim (prova abaixo) |
+| h3 = 4×Manhattan | 31 | 25 | Não (contraexemplo abaixo) |
+ 
+*(Calibração: com a semente 20231045, h2 deu custo 34 e 91 nós - aderente à referência do enunciado, ~93.)*
+ 
+### 3.2 Provas de admissibilidade
+ 
+**h2 é admissível:** o custo mínimo de qualquer passo na grade é 1 (talhão `.`). A distância de Manhattan `d(n,obj)` é o número mínimo de passos ortogonais até o objetivo, ignorando bloqueios. Como bloqueios só forçam desvios (mais passos, nunca menos), o número real de passos `P ≥ d(n,obj)`, e o custo real `h*(n) = soma dos custos dos P passos ≥ P × 1 ≥ d(n,obj) = h2(n)`. Logo `h2(n) ≤ h*(n)` para todo estado - admissível.
+ 
+**h3 não é admissível** - dois talhões concretos da semente `24114034` onde superestima:
+- `(0,0)`: h3 = 4×22 = **88**, custo real ótimo h* = **28** (superestima em +60)
+- `(10,11)` (talhão `.`, vizinho do objetivo): h3 = 4×1 = **4**, custo real h* = **1** (superestima em +3)
+### 3.3 Custo de h3 vs. UCS
+ 
+Custo h3 = 31, UCS = 28 → **maior**. Perda percentual = (31-28)/28 = **10,71%**. Em troca, nós expandidos caíram de 113 (UCS) para 25 (h3) - **88 nós a menos** (77,9% de redução).
+ 
+**Se tivesse ficado igual, provaria admissibilidade?** Não. Admissibilidade exige `h(n) ≤ h*(n)` para **todo** estado do espaço, não só para os estados visitados numa execução. Bater o custo ótimo num pomar específico seria coincidência da topologia daquele mapa, sem garantia nenhuma para outras sementes.
+ 
+**Condição de negócio verificável:** trocar otimalidade por velocidade vale a pena quando o pomar escala (n ≥ 1.000, ≥1 milhão de estados) **e** existe limite de tempo real rígido (ex.: resposta em ≤200ms num hardware embarcado). Na Parte 2.4, a UCS levou 15,2s para n=1.000 - inviável em tempo real. Aceitar ~10% a mais de custo por uma resposta em milissegundos é a troca que viabiliza o sistema nesse cenário.
+ 
+### 3.4 Busca local: K=15 talhões, 6h de bateria
+ 
+**Modelagem:** estado = subconjunto de 15 talhões livres (|L|=121 para a semente `24114034`, logo C(121,15) ≈ 6,65×10¹⁷ combinações possíveis). Vizinhança = troca de 1 talhão por outro fora do conjunto (1.590 vizinhos por estado). Objetivo (maximizar): risco fitossanitário dos talhões escolhidos (`~`=10, `.`=3) + bônus de contiguidade (+2 por par adjacente, simulando manchas de infestação) − penalidade de dispersão (0,5× soma das distâncias Manhattan ao centroide, simulando gasto de deslocamento sob a bateria limitada).
+ 
+**Resultado (30 execuções, `src/busca_local.py`):**
+ 
+| Algoritmo | Média | Desvio | Melhor | Pior |
+|---|---|---|---|---|
+| Subida de encosta | 154,94 | 2,97 | 158,87 | 150,20 |
+| Têmpera simulada | 152,61 | 2,26 | 158,73 | 148,93 |
+ 
+Têmpera simulada aceitou em média **603,9 pioras de propósito por execução** (mín. 565, máx. 657).
+ 
+**Por que aceitar piora ajuda:** a subida de encosta só aceita vizinhos estritamente melhores - fica presa no primeiro pico local que encontra. A têmpera simulada aceita pioras com probabilidade `exp(Δ/T)`: no início (T alto) aceita quase qualquer coisa, funcionando como passeio aleatório que atravessa vales entre picos; conforme T cai, a aceitação de pioras cai junto, convergindo pra uma busca fina perto das melhores regiões encontradas. As ~604 pioras aceitas por execução são exatamente esse mecanismo em ação.
+ 
+### Bônus - Liga de IA: contraexemplo pra DFS
+ 
+Como Norte está fora da grade em `(0,0)`, a DFS sempre tenta Sul primeiro. Construí uma grade 4×4 com um corredor de solo encharcado (`~`) ao Sul e um caminho direto de carreadores (`.`) ao Leste:
+ 
 ```
-.  .  .  .
-~  #  #  .
-~  ~  ~  .
-#  #  ~  .
+. . . .
+~ # # .
+~ ~ ~ .
+# # ~ .
+```
+ 
+- **DFS** (segue Sul cegamente): `(0,0)→(1,0)→(2,0)→(2,1)→(2,2)→(3,2)→(3,3)`, todos `~` exceto o último - custo = 4×5+1 = **21**
+- **UCS (ótima)**: `(0,0)→(0,1)→(0,2)→(0,3)→(1,3)→(2,3)→(3,3)`, todos `.` - custo = **6**
+Razão = 21/6 = **3,5×** o ótimo (exigido: >2×).
+
+## Parte 4 - Regras e incerteza
+
+Parâmetros do sensor (`parametros_sensor(24114034)`): prevalência=0,0272; sensibilidade=0,99; taxa de falso positivo=0,03; talhões/semana=800.
+
+### 4.1 Mini sistema especialista
+
+7 regras SE...ENTÃO (`src/especialista.py`), com encadeamento para trás e rastro de explicação:
+
+```
+R1: armadilha_positiva E umidade_alta E dias_desde_pulverizacao>14 -> inspecionar_prioridade_alta
+R2: armadilha_positiva E umidade_baixa -> inspecionar_prioridade_media
+R3: folhas_amareladas E solo_encharcado -> risco_fungo
+R4: risco_fungo E temperatura_alta -> inspecionar_prioridade_alta
+R5: sem_sinais_visuais E armadilha_negativa -> manejo_rotina
+R6: inspecionar_prioridade_alta E talhao_proximo_reservatorio -> acionar_agronomo_presencial
+R7: dias_desde_pulverizacao>14 E chuva_recente -> reprogramar_pulverizacao
 ```
 
-#### Comparação das Rotas e Custos
-* **Rota devolvida pela DFS:**
-  `(0,0) -> (1,0)[~:4] -> (2,0)[~:4] -> (2,1)[~:4] -> (2,2)[~:4] -> (3,2)[~:4] -> (3,3)[.:1]`
-  * Número de passos: **6**
-  * Custo total da DFS: $4 + 4 + 4 + 4 + 4 + 1 = \mathbf{21}$
+Exemplo de rastro (`python src/especialista.py`), fatos `{folhas_amareladas, solo_encharcado, temperatura_alta}`, pergunta "por que inspecionar_prioridade_alta?":
+```
+Tentando R1 -> premissa 'armadilha_positiva' FALHOU
+Tentando R4: risco_fungo E temperatura_alta -> inspecionar_prioridade_alta
+  Tentando R3: folhas_amareladas E solo_encharcado -> risco_fungo
+    premissa 'folhas_amareladas' -> OK
+    premissa 'solo_encharcado' -> OK
+  => R3 disparada: 'risco_fungo' PROVADO
+  premissa 'risco_fungo' -> OK
+  premissa 'temperatura_alta' -> OK
+=> R4 disparada: 'inspecionar_prioridade_alta' PROVADO
+```
+R1 falhou (sem armadilha_positiva), o motor então testou R4, que encadeou com R3 - exatamente o "por que você concluiu isso?" pedido.
 
-* **Rota ótima devolvida pela UCS:**
-  `(0,0) -> (0,1)[.:1] -> (0,2)[.:1] -> (0,3)[.:1] -> (1,3)[.:1] -> (2,3)[.:1] -> (3,3)[.:1]`
-  * Número de passos: **6**
-  * Custo total da UCS (ótimo): $1 + 1 + 1 + 1 + 1 + 1 = \mathbf{6}$
+### 4.2 Quebrando a própria base
 
-**Razão dos custos:**
-$$\frac{\text{Custo}(\text{DFS})}{\text{Custo}(\text{UCS})} = \frac{21}{6} = \mathbf{3,5 \times}$$
+**Caso legítimo mal classificado:** fatos `{armadilha_positiva, umidade_alta}` - praga confirmada, mas ainda dentro da janela segura de pulverização (≤14 dias). Nem R1 (exige >14 dias) nem R2 (exige umidade_baixa) disparam → a base conclui **"não provado"** para qualquer prioridade. Um talhão com praga confirmada fica sem nenhum manejo recomendado - erro de omissão perigoso.
 
-O custo devolvido pela DFS foi **3,5 vezes maior que o ótimo**, superando com folga o dobro ($> 2,0\times$) exigido pelo regulamento do bônus.
+**Regra corretiva**, sem contradizer R1/R2:
+```
+R8: armadilha_positiva -> inspecionar_prioridade_media
+```
+Traço antes: `inspecionar_prioridade_media` → NÃO PROVADO (R2 falha em `umidade_baixa`).
+Traço depois: R2 ainda falha, mas R8 dispara com só `armadilha_positiva` → PROVADO.
+
+### 4.3 Bayes com os números da dupla
+
+(a) `P(infestado|positivo)` via Bayes:
+```
+P(inf|pos) = (0,99 × 0,0272) / (0,99 × 0,0272 + 0,03 × 0,9728) = 0,4799
+```
+
+(b) A cada 100 alertas do sistema, cerca de **52** são falsos.
+
+(c) Com 800 talhões/semana: **44,9 alertas totais/semana**, dos quais **23,3 são falsos**. A 12 min por inspeção, isso é **4,67 horas/semana** perseguindo alertas falsos.
+
+(d) Aumentando a sensibilidade para 99,9% (mantendo FPR=0,03): novo VPP = **0,4822** - praticamente igual ao original (0,4799). **Não resolve o problema.** Sensibilidade já era alta (0,99); o gargalo é a **taxa de falso positivo** (0,03) multiplicando uma população majoritariamente saudável (97,28%). O parâmetro que realmente vale a pena mexer é a **taxa de falso positivo**, não a sensibilidade.
+
+### 4.4 A regra que fica em regra explícita
+
+**Decisão:** "nunca aplicar manejo automático (ex.: liberar pulverização) num talhão a menos de 14 dias da última aplicação" deve ficar como **regra explícita** (SE...ENTÃO), não em modelo aprendido.
+
+**Justificativa (auditabilidade, não acurácia):** intervalo mínimo de reaplicação é uma exigência regulatória/de segurança do produto, não um padrão estatístico a ser "aprendido" dos dados. Um modelo treinado poderia, em tese, aprender a relaxar essa restrição se isso correlacionasse com melhores métricas de produtividade no histórico - e isso seria uma falha auditável e potencialmente ilegal. Uma regra explícita garante que essa restrição nunca é violada, independentemente do que o modelo estatístico "aprendeu", e pode ser apontada linha por linha numa fiscalização.
