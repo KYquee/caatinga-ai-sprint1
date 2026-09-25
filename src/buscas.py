@@ -36,9 +36,10 @@ class ResultadoBusca:
         self.fronteira_max = fronteira_max
         self.tempo_ms = tempo_ms
 
-    def as_row(self, nome):
+    def as_row(self, nome, heuristica="-"):
         return {
             "estrategia": nome,
+            "heuristica": heuristica,
             "custo": self.custo,
             "passos": self.passos,
             "nos_expandidos": self.nos_expandidos,
@@ -228,6 +229,86 @@ def dfs_recursiva(grade, inicio=(0, 0), objetivo=None):
     return "NAO_ENCONTRADO", None, contadores["nos_expandidos"]
 
 
+def h1_zero(p, objetivo):
+    """Heurística h1: identicamente nula (h(n) = 0). Equivale à UCS."""
+    return 0
+
+
+def h2_manhattan(p, objetivo):
+    """Heurística h2: distância de Manhattan até o objetivo.
+    Admissível pois o custo mínimo de qualquer passo é 1."""
+    return abs(p[0] - objetivo[0]) + abs(p[1] - objetivo[1])
+
+
+def h3_manhattan_x4(p, objetivo):
+    """Heurística h3: 4 x distância de Manhattan até o objetivo.
+    Não admissível pois superestima o custo restante."""
+    return 4 * (abs(p[0] - objetivo[0]) + abs(p[1] - objetivo[1]))
+
+
+HEURISTICAS = {
+    "h1": h1_zero,
+    "h2": h2_manhattan,
+    "h3": h3_manhattan_x4,
+    "zero": h1_zero,
+    "manhattan": h2_manhattan,
+    "manhattan_x4": h3_manhattan_x4,
+}
+
+
+def astar(grade, inicio=(0, 0), objetivo=None, heuristica="h2", reabrir=True):
+    """A* com suporte a diferentes heurísticas, teste de objetivo na expansão,
+    instrumentação de nós expandidos e tamanho máximo da fronteira.
+    Por padrão, reabre nós fechados se um caminho mais barato for encontrado
+    (reabrir=True)."""
+    import time
+    t0 = time.perf_counter()
+    n = len(grade)
+    if objetivo is None:
+        objetivo = (n - 1, n - 1)
+
+    if callable(heuristica):
+        h_func = heuristica
+    else:
+        h_func = HEURISTICAS.get(heuristica, h2_manhattan)
+
+    contador = itertools.count()
+    h0 = h_func(inicio, objetivo)
+    fronteira = [(h0, next(contador), inicio)]
+    g_score = {inicio: 0}
+    veio_de = {}
+    fechados = set()
+    nos_expandidos = 0
+    fronteira_max = 1
+
+    while fronteira:
+        fronteira_max = max(fronteira_max, len(fronteira))
+        f_atual, _, atual = heapq.heappop(fronteira)
+        if atual in fechados:
+            continue
+        fechados.add(atual)
+        nos_expandidos += 1
+        if atual == objetivo:
+            caminho = _reconstruir_caminho(veio_de, atual)
+            t1 = time.perf_counter()
+            return ResultadoBusca(True, caminho, g_score[atual], len(caminho) - 1,
+                                  nos_expandidos, fronteira_max, (t1 - t0) * 1000)
+
+        for viz in _vizinhos(grade, n, *atual):
+            novo_g = g_score[atual] + CUSTO[grade[viz[0]][viz[1]]]
+            if viz not in g_score or novo_g < g_score[viz]:
+                g_score[viz] = novo_g
+                veio_de[viz] = atual
+                if reabrir and viz in fechados:
+                    fechados.remove(viz)
+                novo_f = novo_g + h_func(viz, objetivo)
+                heapq.heappush(fronteira, (novo_f, next(contador), viz))
+
+    t1 = time.perf_counter()
+    return ResultadoBusca(False, [], None, None, nos_expandidos, fronteira_max,
+                          (t1 - t0) * 1000)
+
+
 if __name__ == "__main__":
     import sys
     from gerador_pomar import gerar_pomar
@@ -238,8 +319,18 @@ if __name__ == "__main__":
     r_bfs = bfs(grade)
     r_dfs = dfs(grade)
     r_ucs = ucs(grade)
+    r_ah1 = astar(grade, heuristica="h1")
+    r_ah2 = astar(grade, heuristica="h2")
+    r_ah3 = astar(grade, heuristica="h3")
 
     print(f"Matricula: {m}")
-    print(f"{'Estrategia':12} {'Custo':>6} {'Passos':>7} {'NosExp':>7} {'FrontMax':>9}")
-    for nome, r in [("BFS", r_bfs), ("DFS", r_dfs), ("UCS", r_ucs)]:
-        print(f"{nome:12} {r.custo:>6} {r.passos:>7} {r.nos_expandidos:>7} {r.fronteira_max:>9}")
+    print(f"{'Estrategia':18} {'Custo':>6} {'Passos':>7} {'NosExp':>7} {'FrontMax':>9}")
+    for nome, r in [
+        ("BFS", r_bfs),
+        ("DFS", r_dfs),
+        ("UCS", r_ucs),
+        ("A* (h1: zero)", r_ah1),
+        ("A* (h2: Manhattan)", r_ah2),
+        ("A* (h3: 4xManhattan)", r_ah3),
+    ]:
+        print(f"{nome:18} {r.custo:>6} {r.passos:>7} {r.nos_expandidos:>7} {r.fronteira_max:>9}")
