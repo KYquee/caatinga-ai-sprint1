@@ -1,0 +1,4 @@
+estrategia,custo,passos,nos_expandidos,fronteira_max,tempo_ms,otima_em_custo
+BFS,55,22,121,12,0.412,nao
+DFS,130,52,81,47,0.557,nao
+UCS,28,22,113,22,0.417,sim
