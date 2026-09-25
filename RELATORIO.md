@@ -214,3 +214,20 @@ P(inf|pos) = (0,99 × 0,0272) / (0,99 × 0,0272 + 0,03 × 0,9728) = 0,4799
 **Decisão:** "nunca aplicar manejo automático (ex.: liberar pulverização) num talhão a menos de 14 dias da última aplicação" deve ficar como **regra explícita** (SE...ENTÃO), não em modelo aprendido.
 
 **Justificativa (auditabilidade, não acurácia):** intervalo mínimo de reaplicação é uma exigência regulatória/de segurança do produto, não um padrão estatístico a ser "aprendido" dos dados. Um modelo treinado poderia, em tese, aprender a relaxar essa restrição se isso correlacionasse com melhores métricas de produtividade no histórico - e isso seria uma falha auditável e potencialmente ilegal. Uma regra explícita garante que essa restrição nunca é violada, independentemente do que o modelo estatístico "aprendeu", e pode ser apontada linha por linha numa fiscalização.
+
+## Parte 5 - Auditoria do laudo do fornecedor
+ 
+### 1. "A* com h3=4×Manhattan é comprovadamente ótimo, então a rota é sempre a mais barata."
+**Incorreta.** Otimalidade do A* exige heurística admissível; h3 não é (Parte 3.2). Na nossa semente, h3 devolveu custo 31 contra o ótimo real de 28 (Parte 3.1) - 10,71% mais caro, não "sempre a mais barata".
+ 
+### 2. "Substituir BFS por A* caiu 38% o custo. Isso prova que a heurística melhora a solução."
+**Enganosa.** A queda vem de considerar custo, não da heurística: BFS→UCS (sem heurística nenhuma) já cai 49,1% (55→28, Parte 2.2). A* com h2 dá o mesmo custo da UCS (28) - a heurística só reduz nós expandidos (113→54), não melhora a rota.
+ 
+### 3. "99% de sensibilidade, então 99% dos apontados estão infestados."
+**Incorreta.** Confunde sensibilidade com VPP. Com nossos parâmetros, VPP real = 47,99% (Parte 4.3a) - menos da metade do alegado.
+ 
+### 4. "Dois positivos seguidos levam a confiança pra além de 99%."
+**Incorreta mesmo no melhor caso.** Atualização bayesiana sequencial com nossos números dá 96,82% assumindo testes independentes - e mesmo sensor, mesmo talhão, near-simultâneo tende a ter erros correlacionados, então o real fica ainda mais abaixo.
+ 
+### 5. "DFS gasta muito menos memória, e como o ambiente é estático e observável, ela basta."
+**Incorreta nas duas partes.** Na Parte 2.2, a fronteira máxima da DFS (47) foi *maior* que a da UCS (22) - o oposto do alegado. E estático/observável são propriedades do ambiente, não justificam a escolha do algoritmo - o bônus da Parte 3.4 mostra a mesma DFS devolvendo rota 3,5× pior que o ótimo.
