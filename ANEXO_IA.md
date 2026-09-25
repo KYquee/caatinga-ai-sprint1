@@ -2,7 +2,7 @@
 
 > **Atividade Prática Avaliativa - Sprint 1 do Projeto Caatinga.AI**  
 > **Disciplina:** Inteligência Artificial - Prof. Ronierison Maciel - UniRios - 2026.2  
-> **Dupla:** Matheus Caique e Arthur (Matrícula semente: `24114034`)
+> **Dupla:** Matheus Caique e Arthur Ivo (Matrícula semente: `24114034`)
 
 ---
 
@@ -122,4 +122,4 @@ Essa necessidade foi explicitamente confirmada na Seção 12 (Armadilha 4) do ed
 
 ## A.4 O que Aprendemos após Rodar o Código
 
-> *"Depois de rodar o código, ficou evidente que a velocidade surpreendente de uma heurística inflada como $h_3$ não resulta de nenhuma 'compreensão superior' do mapa, mas sim de uma agressividade cega que descarta alternativas em busca da meta, 'comprando' 77,8% menos nós às custas de degradar a rota ótima em 10,7% — uma troca de engenharia que a teoria descreve em fórmulas, mas que só a execução concreta no pomar torna tangível."*
+> *Depois de executar o código, observamos que a heurística h3 reduziu os nós expandidos de 113 para 25, mas encontrou uma rota de custo 31, enquanto a UCS encontrou uma rota de custo 28. Isso mostrou, na prática, que uma heurística pode reduzir o esforço da busca sem garantir que a solução encontrada seja ótima.*
