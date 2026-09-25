@@ -18,8 +18,9 @@ def gerar_pomar(matricula: int, n: int = 12):
         else: j += 1
         if g[i][j] == BLOQUEADO:
             g[i][j] = "~"
-            g[n - 1][n - 1] = "."
+    g[n - 1][n - 1] = "."
     return g
+
 def parametros_sensor(matricula: int):
     rng = random.Random((matricula % 1_000_000) + 777)
     return {
