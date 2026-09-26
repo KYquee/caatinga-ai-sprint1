@@ -61,9 +61,9 @@ Resultados obtidos utilizando a matrícula-semente `24114034`.
 | BFS        | -                  |    55 |     22 |            121 |               12 |
 | DFS        | -                  |   130 |     52 |             81 |               47 |
 | UCS        | -                  |    28 |     22 |            113 |               22 |
-| A*         | h1 = 0             |    28 |      - |            113 |                - |
-| A*         | h2 = Manhattan     |    28 |      - |             54 |                - |
-| A*         | h3 = 4 × Manhattan |    31 |      - |             25 |                - |
+| A*         | h1 = 0             |    28 |     22 |            113 |               22 |
+| A*         | h2 = Manhattan     |    28 |     22 |             54 |               26 |
+| A*         | h3 = 4 × Manhattan |    31 |     22 |             25 |               21 |
 
 A UCS encontrou o menor custo da rota para a semente utilizada. A heurística Manhattan também encontrou esse mesmo custo no A*, reduzindo o número de nós expandidos em relação à UCS.
 
